@@ -1,0 +1,74 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <h1>Break-Games Vending Machine:</h1>
+        <h2>Rock, Paper, Scissors, Lizard, Spock</h2>
+        <div id="result-box">
+            <h3>GAME RESULT</h3>
+            <div id="result-message"></div>
+            <button id="restart">PLAY AGAIN</button>
+        </div>
+        <div id="pentagon" class="pentagon">
+            <div class="option scissors">
+                <h5>SCISSORS</h5>
+                    <pre>
+ \   /
+ \_/
+ / \
+ /   \
+                    </pre>
+            </div>
+            <div class="option paper">
+                <h5>PAPER</h5>
+                    <pre>
+_____________
+|             |
+|             |
+|             |
+|_____________|
+                    </pre>
+            </div>
+            <div class="option rock">
+                <h5>ROCK</h5>
+                    <pre>
+  _______
+ /       \
+ |        |
+ \_______/
+                    </pre>
+            </div>
+            <div class="option lizard">
+                <h5>LIZARD</h5>
+                    <pre>
+(\_._/)
+( o o )
+>  ^  <
+                    </pre>
+            </div>
+            <div class="option spock">
+                <h5>SPOCK</h5>
+                    <pre>
+\\   //
+ \\_//
+ |||
+ |||
+                    </pre>
+            </div>
+            <div class="arrows">
+                <div class="arrow rock-to-scissors"></div>
+                <div class="arrow scissors-to-paper"></div>
+                <div class="arrow paper-to-spock"></div>
+                <div class="arrow spock-to-rock"></div>
+                <div class="arrow rock-to-lizard"></div>
+                <div class="arrow lizard-to-paper"></div>
+                <div class="arrow paper-to-rock"></div>
+                <div class="arrow spock-to-scissors"></div>
+                <div class="arrow lizard-to-spock"></div>
+                <div class="arrow scissors-to-lizard"></div>
+            </div>
+        </div>
+        <script src="app.js"></script>
+    </body>
+</html>

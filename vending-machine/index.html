@@ -1,0 +1,39 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <h1>Break-Games Vending Machine</h1>
+        <table id="vending-machine">
+            <tr> 
+                <td id="game-cell" rowspan="3"> <!-- GAME LIST COL -->
+                    <div id="game-list" />
+                </td> <!-- INTERACTION COL -->
+                <td>
+                    <h5 style="text-align: center;">PLAYERS</h5>
+                    <div id="players-cell" />
+                </td>
+            </tr>
+            <tr>
+                <td id="break-cell">
+                    <h5 style="text-align: center;">BREAK</h5>
+                    <div id="break-cell">
+                        <input id="break-time" type="number" max="20" value="5" readonly/>
+                        <button id="increase-break" onclick="increaseBreak()">/\</button><button id="decrease-break" onclick="decreaseBreak()">\/</button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td id="play-cell">
+                    <button id="play-button">PLAY</button>
+                </td>
+            </tr>
+            <tr>
+                <td id="qr-cell" colspan="2">
+                     
+                </td>
+            </tr>
+        </table>
+        <script src="app.js"></script>
+    </body>
+</html>

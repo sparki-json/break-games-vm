@@ -1,0 +1,71 @@
+body {
+    text-align: center;
+}
+
+#vending-machine {
+    margin-left: auto;
+    margin-right: auto;
+    padding: 10px;
+    min-height: 50%;
+    min-width: 30%;
+}
+
+#vending-machine, #game-cell, #game-list td, #qr-cell {
+    border: 1px solid black;
+}
+
+#vending-machine td {
+    padding: 5px;
+}
+
+#game-list {
+    padding: 15px;
+    grid-template-columns: repeat(1, auto);
+}
+
+#game-list td {
+    border-radius: 10px;
+    padding: 5px;
+}
+
+#break-time {
+    width: 20%;
+}
+
+#players-cell {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+}
+
+#players-cell input[type="radio"], #game-list input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+#players-cell label, #game-list label {
+    padding: 6px 12px;
+    border: 1px solid #bdbdbd;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    line-height: 1;
+    transition: background .12s ease, color .12s ease, box-shadow .12s ease, transform .06s ease;
+}
+
+#game-list label {
+    border-radius: 10px;
+    margin: 10;
+}
+
+#players-cell input[type="radio"]:checked + label, #game-list input[type="radio"]:checked + label {
+  background: #000000;
+  color: #fff;
+}

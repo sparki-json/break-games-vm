@@ -1,0 +1,95 @@
+body {
+    text-align: center;
+}
+
+.pentagon {
+  position: relative;
+  width: 400px;    /* adjust as needed */
+  height: 400px;
+  margin: 2rem auto;
+}
+
+/* style all option divs consistently */
+.pentagon .option {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
+  border: 1px dotted grey;
+}
+
+/* hover effect */
+.pentagon .option:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* pentagon positioning using rotate around center */
+.pentagon .option:nth-child(1) { /* rock - top */
+  top: 0%;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+.pentagon .option:nth-child(2) { /* paper - top right */
+  top: 30%;
+  left: 90%;
+  transform: translate(-50%, -50%);
+}
+.pentagon .option:nth-child(3) { /* scissors - bottom right */
+  top: 75%;
+  left: 75%;
+  transform: translate(-50%, -50%);
+}
+.pentagon .option:nth-child(4) { /* lizard - bottom left */
+  top: 75%;
+  left: 25%;
+  transform: translate(-50%, -50%);
+}
+.pentagon .option:nth-child(5) { /* spock - top left */
+  top: 30%;
+  left: 10%;
+  transform: translate(-50%, -50%);
+}
+
+/* optional: scale pre to fit nicely */
+.pentagon pre {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+/* arrows overlay */
+.arrows { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+.arrow {
+    z-index: -100;
+    color: red;
+    position:absolute;
+    white-space:pre;
+    font-family: monospace;
+    font-weight:700;
+    pointer-events:none;
+    transform-origin: 0 50%;
+    overflow:hidden;
+    height:1em;
+    line-height:1em;
+}
+
+#result-box {
+    margin: auto;
+    max-width: 20%;
+    display: none;
+    border: 2px dotted black;
+    padding: 10px;
+}
+
+#restart {
+    display: none;
+}
