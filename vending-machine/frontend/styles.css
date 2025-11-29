@@ -69,3 +69,14 @@ body {
   background: #000000;
   color: #fff;
 }
+
+#break-time {
+    padding: 5px;
+    border: 1px solid black;
+    float: left;
+    text-align: center;
+}
+
+#increase-break, #decrease-break {
+    float: right;
+}

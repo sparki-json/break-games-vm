@@ -52,12 +52,12 @@ playCell.appendChild(playerFrag);
 //break functions
 function increaseBreak() {
     const breakInput = document.getElementById("break-time");
-    var breakTime = parseInt(breakInput.value);
-    if(breakTime < 20) breakInput.value = breakTime + 1;
+    var breakTime = parseInt(breakInput.innerText);
+    if(breakTime < 20) breakInput.innerText = breakTime + 1;
 }
 
 function decreaseBreak() {
     const breakInput = document.getElementById("break-time");
-    var breakTime = parseInt(breakInput.value);
-    if(breakTime > 5) breakInput.value = breakTime - 1;
+    var breakTime = parseInt(breakInput.innerText);
+    if(breakTime > 5) breakInput.innerText = breakTime - 1;
 }
