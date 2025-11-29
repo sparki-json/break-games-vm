@@ -2,71 +2,70 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: rpslk-backend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: backend
+      app: rpslk-backend
   template:
     metadata:
       labels:
-        app: backend
+        app: rpslk-backend
     spec:
       containers:
-        - name: backend
-          image: localhost:5000/rpslk-game-backend
-          imagePullPolicy: IfNotPresent 
+        - name: rpslk-backend
+          image: rpslk-backend:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
           env:
             - name: FLASK_ENV
               value: "production"
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-spec:
-  selector:
-    app: backend
-  ports:
-    - name: http
-      port: 8000
-      targetPort: 8000
-  type: ClusterIP
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: rpslk-frontend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: frontend
+      app: rpslk-frontend
   template:
     metadata:
       labels:
-        app: frontend
+        app: rpslk-frontend
     spec:
       containers:
-        - name: frontend
-          image: localhost:5000/rpslk-game-frontend
-          imagePullPolicy: IfNotPresent
+        - name: rpslk-frontend
+          image: rpslk-frontend:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: rpslk-frontend
 spec:
   selector:
-    app: frontend
+    app: rpslk-frontend
   ports:
     - name: http
-      port: 80
+      port: 8080
       targetPort: 80
-  type: LoadBalancer
-
+  type: NodePort 
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: rpslk-backend
+spec:
+  selector:
+    app: rpslk-backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: NodePort

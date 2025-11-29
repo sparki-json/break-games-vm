@@ -89,7 +89,7 @@ function displayPentagon(enable) {
 
 //send backend
 async function sendChoice(option) {
-    const endpoint = 'http://127.0.0.1:8000/play';
+    const endpoint = '/play';
     try {
         displayPentagon(false);
         showResult("Waiting for result...");
