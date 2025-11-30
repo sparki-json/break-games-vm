@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpslk-backend
+  name: vm-backend
 spec:
-  replicas: 2
+  replicas: 0
   selector:
     matchLabels:
-      app: rpslk-backend
+      app: vm-backend
   template:
     metadata:
       labels:
-        app: rpslk-backend
+        app: vm-backend
     spec:
       containers:
-        - name: rpslk-backend
-          image: rpslk-backend:latest
+        - name: vm-backend
+          image: vm-backend:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8000
@@ -26,20 +26,20 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpslk-frontend
+  name: vm-frontend
 spec:
-  replicas: 2
+  replicas: 0
   selector:
     matchLabels:
-      app: rpslk-frontend
+      app: vm-frontend
   template:
     metadata:
       labels:
-        app: rpslk-frontend
+        app: vm-frontend
     spec:
       containers:
-        - name: rpslk-frontend
-          image: rpslk-frontend:latest
+        - name: vm-frontend
+          image: vm-frontend:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 80
@@ -47,10 +47,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpslk-frontend
+  name: vm-frontend
 spec:
   selector:
-    app: rpslk-frontend
+    app: vm-frontend
   ports:
     - name: http
       port: 8080
@@ -60,10 +60,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata: 
-  name: rpslk-backend
+  name: vm-backend
 spec:
   selector:
-    app: rpslk-backend
+    app: vm-backend
   ports:
     - protocol: TCP
       port: 8000
