@@ -48,7 +48,8 @@ jobs:
           path: ~/.cache/pip #where to store cached data
           key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }} #key to store and lookup a cache blob, e.g. pip-Linux-3a7f9b2c...
           restore-keys: |
-            pip-${{ runner.os }}- #if no exact match with previous key, try restore any OS matching cache
+            pip-${{ runner.os }}- 
+          #if no exact match with previous key, try restore any OS matching cache
 
       - name: Backend tests (rpslk-game) #shell step
         working-directory: rpslk-game/backend #checks for requirements.txt, upgrades pip and installs them. if tests are present, runs them
