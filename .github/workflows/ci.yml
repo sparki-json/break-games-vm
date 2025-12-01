@@ -113,7 +113,7 @@ jobs:
           tags: vending-machine-frontend:ci-${{ github.run_id }}
 
       - name: Trivy - scan rpslk-game backend image #scans docker image for security vulnerabilities 
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: rpslk-game-backend:ci-${{ github.run_id }}
           format: 'table' #
@@ -121,21 +121,21 @@ jobs:
           # Trivy caches DB by default to speed up subsequent runs.
 
       - name: Trivy - scan rpslk-game frontend image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: rpslk-game-frontend:ci-${{ github.run_id }}
           format: 'table'
           exit-code: '1'
 
       - name: Trivy - scan vending-machine backend image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: vending-machine-backend:ci-${{ github.run_id }}
           format: 'table'
           exit-code: '1'
 
       - name: Trivy - scan vending-machine frontend image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: vending-machine-frontend:ci-${{ github.run_id }}
           format: 'table'
