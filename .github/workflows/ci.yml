@@ -1,0 +1,142 @@
+name: CI - lint, test, build (no push) & sec scan
+on: #which events trigger the actions
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch: #manually by user-request button in Actions tab
+
+env: #env var declaration
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  dockerfile-lint: #job ID
+    name: Dockerfile lint #job name
+    runs-on: ubuntu-latest #which OS will run on
+    strategy: #var declaration for multi job run
+      matrix:
+        path: ["rpslk-game/backend/Dockerfile", "rpslk-game/frontend/Dockerfile", "vending-machine/backend/Dockerfile", "vending-machine/frontend/Dockerfile"]
+    steps:
+      - name: Checkout #checks out the repo to make it available for current workflow
+        uses: actions/checkout@v6 
+
+      - name: Run hadolint on ${{ matrix.path }} #hadolint analises dockerfiles to ensure it follows best practices and guidelines
+        uses: hadolint/hadolint-action@v3
+        with: #input parameters defined by action
+          dockerfile: ${{ matrix.path }} #usage of matrix variable previously set in strategy section
+          failure-threshold: error #if error is found, pipepline is stopped
+
+  test-and-build:
+    name: Tests, build images (no push) and scan
+    runs-on: ubuntu-latest
+    needs: dockerfile-lint #this job depends on the correct end of stated job
+    env:
+      IMAGE_NAMESPACE: ${{ secrets.DOCKER_REPO }} #usage of secret var
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU #needed to execute next action, buildx
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker buildx #creates and boots a docker builder to use through the workflow
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache pip (backend) #cache action to save time in future executions, saves python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip #where to store cached data
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }} #key to store and lookup a cache blob, e.g. pip-Linux-3a7f9b2c...
+          restore-keys: |
+            pip-${{ runner.os }}- #if no exact match with previous key, try restore any OS matching cache
+
+      - name: Backend tests (rpslk-game) #shell step
+        working-directory: rpslk-game/backend #checks for requirements.txt, upgrades pip and installs them. if tests are present, runs them
+        run: | 
+          if [ -f requirements.txt ]; then 
+            python -m pip install --upgrade pip
+            python -m pip install -r requirements.txt
+          fi
+          if [ -d tests ] || [ -f pytest.ini ]; then 
+            pytest -q || ( echo "backend tests failed"; exit 1 )
+          else
+            echo "No backend tests detected - skipping pytest"
+          fi
+
+      - name: Backend tests (vending-machine)
+        working-directory: vending-machine/backend
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            python -m pip install -r requirements.txt
+          fi
+          if [ -d tests ] || [ -f pytest.ini ]; then
+            pytest -q || ( echo "vending-machine backend tests failed"; exit 1 )
+          else
+            echo "No vending-machine backend tests detected - skipping pytest"
+          fi
+
+      - name: Build images (load into runner - no push) #builds docker image with parameters
+        uses: docker/build-push-action@v6
+        with:
+          context: rpslk-game/backend
+          file: rpslk-game/backend/Dockerfile
+          push: false #wont push to repo
+          load: true #loads image to use for workflow
+          tags: rpslk-game-backend:ci-${{ github.run_id }} #tags the image with current running id
+
+      - name: Build rpslk-game frontend image (load)
+        uses: docker/build-push-action@v6
+        with:
+          context: rpslk-game/frontend
+          file: rpslk-game/frontend/Dockerfile
+          push: false
+          load: true
+          tags: rpslk-game-frontend:ci-${{ github.run_id }}
+
+      - name: Build vending-machine backend image (load)
+        uses: docker/build-push-action@v6
+        with:
+          context: vending-machine/backend
+          file: vending-machine/backend/Dockerfile
+          push: false
+          load: true
+          tags: vending-machine-backend:ci-${{ github.run_id }}
+
+      - name: Build vending-machine frontend image (load)
+        uses: docker/build-push-action@v6
+        with:
+          context: vending-machine/frontend
+          file: vending-machine/frontend/Dockerfile
+          push: false
+          load: true
+          tags: vending-machine-frontend:ci-${{ github.run_id }}
+
+      - name: Trivy - scan rpslk-game backend image #scans docker image for security vulnerabilities 
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          image-ref: rpslk-game-backend:ci-${{ github.run_id }}
+          format: 'table' #
+          exit-code: '1' # fail the job on vulnerabilities
+          # Trivy caches DB by default to speed up subsequent runs.
+
+      - name: Trivy - scan rpslk-game frontend image
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          image-ref: rpslk-game-frontend:ci-${{ github.run_id }}
+          format: 'table'
+          exit-code: '1'
+
+      - name: Trivy - scan vending-machine backend image
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          image-ref: vending-machine-backend:ci-${{ github.run_id }}
+          format: 'table'
+          exit-code: '1'
+
+      - name: Trivy - scan vending-machine frontend image
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          image-ref: vending-machine-frontend:ci-${{ github.run_id }}
+          format: 'table'
+          exit-code: '1'
