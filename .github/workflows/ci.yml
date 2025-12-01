@@ -18,10 +18,10 @@ jobs:
         path: ["rpslk-game/backend/Dockerfile", "rpslk-game/frontend/Dockerfile", "vending-machine/backend/Dockerfile", "vending-machine/frontend/Dockerfile"]
     steps:
       - name: Checkout #checks out the repo to make it available for current workflow
-        uses: actions/checkout@v6 
+        uses: actions/checkout@v6.0.0
 
       - name: Run hadolint on ${{ matrix.path }} #hadolint analises dockerfiles to ensure it follows best practices and guidelines
-        uses: hadolint/hadolint-action@v3
+        uses: hadolint/hadolint-action@v3.3.0
         with: #input parameters defined by action
           dockerfile: ${{ matrix.path }} #usage of matrix variable previously set in strategy section
           failure-threshold: error #if error is found, pipepline is stopped
@@ -34,16 +34,16 @@ jobs:
       IMAGE_NAMESPACE: ${{ secrets.DOCKER_REPO }} #usage of secret var
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.0
 
       - name: Set up QEMU #needed to execute next action, buildx
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v3.7.0
 
       - name: Set up Docker buildx #creates and boots a docker builder to use through the workflow
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.11.1
 
       - name: Cache pip (backend) #cache action to save time in future executions, saves python dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: ~/.cache/pip #where to store cached data
           key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }} #key to store and lookup a cache blob, e.g. pip-Linux-3a7f9b2c...
@@ -77,7 +77,7 @@ jobs:
           fi
 
       - name: Build images (load into runner - no push) #builds docker image with parameters
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: rpslk-game/backend
           file: rpslk-game/backend/Dockerfile
@@ -86,7 +86,7 @@ jobs:
           tags: rpslk-game-backend:ci-${{ github.run_id }} #tags the image with current running id
 
       - name: Build rpslk-game frontend image (load)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: rpslk-game/frontend
           file: rpslk-game/frontend/Dockerfile
@@ -95,7 +95,7 @@ jobs:
           tags: rpslk-game-frontend:ci-${{ github.run_id }}
 
       - name: Build vending-machine backend image (load)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: vending-machine/backend
           file: vending-machine/backend/Dockerfile
@@ -104,7 +104,7 @@ jobs:
           tags: vending-machine-backend:ci-${{ github.run_id }}
 
       - name: Build vending-machine frontend image (load)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: vending-machine/frontend
           file: vending-machine/frontend/Dockerfile
