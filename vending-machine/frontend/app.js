@@ -70,15 +70,15 @@ function showQr(html) {
 }
 
 //send backend
-async function sendChoice(game, time) {
+async function sendChoice(game, lifetime) {
     const endpoint = '/start-game';
     try {
-        showResult("Waiting for pod generation...");
+        showQr("Waiting for pod generation...");
 
         const resp = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ game })
+            body: JSON.stringify({ game, lifetime })
         })
 
         if (!resp.ok) {
@@ -92,7 +92,7 @@ async function sendChoice(game, time) {
                     IP: <a href="http://${data.ip}/">http://${data.ip}/</a></br>
                     Lifetime: <b>${data.lifetime}</b></br>`;
 
-        showResult(html);
+        showQr(html);
 
     } catch (err) {
         console.error(err);

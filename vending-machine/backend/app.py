@@ -1,8 +1,12 @@
 from flask import Flask, request, jsonify
+import logging
 
 app = Flask(__name__)
 
 options = ["rpslk"]
+logging.basicConfig(filename='./exception-log.log', level=logging.DEBUG, 
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger = logging.getLogger(__name__)
 
 @app.route("/start-game", methods=['POST'])
 def start_game():
@@ -21,19 +25,20 @@ def start_game():
 
     #after request data validation, the program begins
 
-    from kubernetes import client, config
-    import time
-    import random
-
-    DEPLOYMENT_NAME = "rpslk-frontend"
-    WAITING_TIMEOUT = 10
-
-    config.load_kube_config()
-
-    api = client.AppsV1Api()
-    core_api = client.CoreV1Api()
-
     try:
+        from kubernetes import client, config
+        import time
+        import random
+
+        DEPLOYMENT_NAME = "rpslk-frontend"
+        WAITING_TIMEOUT = 20
+
+        config.load_config()
+        #config.load_kube_config()
+
+        api = client.AppsV1Api()
+        core_api = client.CoreV1Api()
+
         deployment_obj = api.read_namespaced_deployment_scale(
             name=DEPLOYMENT_NAME,
             namespace="default"
@@ -43,7 +48,7 @@ def start_game():
         desired_replicas = current_replicas + 1        
 
         if desired_replicas > 10:
-            return jsonify({"warning": "too many concurrent games"}), 200
+            return jsonify({"warning": "too many concurrent games, pod creation not possible"}), 400
 
         patch_body = {
             "spec": {
@@ -93,7 +98,8 @@ def start_game():
         pod_name = pods.items[desired_replicas - 1].metadata.name #assumes last pod is the newly created
 
         return jsonify({"pod": pod_name, "status": "running", "ip": f"{random.choice(node_ips)}:{port}", "lifetime": lifetime})
-    except Exception:
+    except Exception as e:
+        logger.error(e)
         return jsonify({"error": "Internal error"}), 400
 
     return jsonify({"error": "Internal error"}), 400
