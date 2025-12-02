@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.15-rc-alpine
+FROM python:3.15.0a2-slim
 
 RUN addgroup --system app && adduser --system --ingroup app app
 
