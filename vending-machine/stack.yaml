@@ -83,7 +83,7 @@ spec:
       serviceAccountName: deploy-manager
       containers:
         - name: vm-backend
-          image: vm-backend:latest
+          image: vm-backend-distroless:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8000
@@ -107,7 +107,7 @@ spec:
     spec:
       containers:
         - name: vm-frontend
-          image: vm-frontend:latest
+          image: bgvm-vm-frontend:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 80

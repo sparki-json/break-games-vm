@@ -1,18 +1,20 @@
 # syntax=docker/dockerfile:1
-FROM python:3.15.0a2-slim
-
-RUN addgroup --system app && adduser --system --ingroup app app
+FROM python:3.15.0a2-slim AS build-env
 
 WORKDIR /app
 
 COPY requirements.txt requirements.txt
-RUN pip3 --no-cache-dir install -r requirements.txt
+RUN pip3 --no-cache-dir install -r requirements.txt --target /packages
 
 COPY app.py app.py
+COPY run.py run.py
 
-RUN chown -R app:app /app
-USER app
+FROM gcr.io/distroless/python3
 
-EXPOSE 8000
+WORKDIR /app
+COPY --from=build-env /app /app
+COPY --from=build-env /packages /packages
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "app:app", "--access-logfile", "flask-access-log", "--error-logfile", "flask-error-log"]
+ENV PYTHONPATH=/packages
+
+CMD ["run.py"]

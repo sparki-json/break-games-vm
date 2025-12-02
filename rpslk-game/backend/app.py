@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 
-app = Flask(__name__)
+application = Flask(__name__)
 
 options = ["scissors", "paper", "rock", "lizard", "spock"]
 
@@ -25,7 +25,7 @@ messages = {
     'spock_rock': 'Spock vaporizes Rock'
 }
 
-@app.route("/play", methods=['POST'])
+@application.route("/play", methods=['POST'])
 def make_play():
     content = request.get_json(silent=True) #silent returns None instead of error
     if not content:
@@ -60,3 +60,5 @@ def make_play():
         "message": message
     })
     
+if __name__ == "__main__":
+    application.run(host="0.0.0.0", port=8000, debug=True)

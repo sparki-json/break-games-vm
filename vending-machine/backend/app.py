@@ -1,14 +1,10 @@
 from flask import Flask, request, jsonify
-import logging
 
-app = Flask(__name__)
+application = Flask(__name__)
 
 options = ["rpslk"]
-logging.basicConfig(filename='./exception-log.log', level=logging.DEBUG, 
-                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
-logger = logging.getLogger(__name__)
 
-@app.route("/start-game", methods=['POST'])
+@application.route("/start-game", methods=['POST'])
 def start_game():
     content = request.get_json(silent=True)
     if not content:
@@ -99,8 +95,9 @@ def start_game():
 
         return jsonify({"pod": pod_name, "status": "running", "ip": f"{random.choice(node_ips)}:{port}", "lifetime": lifetime})
     except Exception as e:
-        logger.error(e)
         return jsonify({"error": "Internal error"}), 400
 
     return jsonify({"error": "Internal error"}), 400
 
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

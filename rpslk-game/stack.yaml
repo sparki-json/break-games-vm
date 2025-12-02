@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: rpslk-backend
-          image: rpslk-backend:latest
+          image: rpslk-backend-distroless:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8000
@@ -39,7 +39,7 @@ spec:
     spec:
       containers:
         - name: rpslk-frontend
-          image: rpslk-frontend:latest
+          image: bgvm-rpslk-frontend:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 80
