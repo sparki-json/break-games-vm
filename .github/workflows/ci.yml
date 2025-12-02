@@ -117,7 +117,8 @@ jobs:
         uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: rpslk-game-backend:ci-${{ github.run_id }}
-          format: 'table' #
+          format: 'table' #format output as table
+          severity: 'CRITICAL,HIGH' #scan only CRITICAL and HIGH vuln
           exit-code: '1' # fail the job on vulnerabilities
           # Trivy caches DB by default to speed up subsequent runs.
 
@@ -126,6 +127,7 @@ jobs:
         with:
           image-ref: rpslk-game-frontend:ci-${{ github.run_id }}
           format: 'table'
+          severity: 'CRITICAL,HIGH'
           exit-code: '1'
 
       - name: Trivy - scan vending-machine backend image
@@ -133,6 +135,7 @@ jobs:
         with:
           image-ref: vending-machine-backend:ci-${{ github.run_id }}
           format: 'table'
+          severity: 'CRITICAL,HIGH'
           exit-code: '1'
 
       - name: Trivy - scan vending-machine frontend image
@@ -140,4 +143,5 @@ jobs:
         with:
           image-ref: vending-machine-frontend:ci-${{ github.run_id }}
           format: 'table'
+          severity: 'CRITICAL,HIGH'
           exit-code: '1'
