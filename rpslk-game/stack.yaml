@@ -15,13 +15,23 @@ spec:
     spec:
       containers:
         - name: rpslk-backend
-          image: rpslk-backend-distroless:latest
+          image: rpslk-backend:v1.0.0
           imagePullPolicy: Never
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
           ports:
             - containerPort: 8000
           env:
             - name: FLASK_ENV
               value: "production"
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -39,10 +49,20 @@ spec:
     spec:
       containers:
         - name: rpslk-frontend
-          image: bgvm-rpslk-frontend:latest
+          image: rpslk-frontend:v1.0.0
           imagePullPolicy: Never
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
           ports:
             - containerPort: 80
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
 ---
 apiVersion: v1
 kind: Service

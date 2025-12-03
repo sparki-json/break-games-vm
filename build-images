@@ -1,6 +1,6 @@
 #!/bin/bash
-docker build -t rpslk-backend:latest rpslk-game/backend/.
-docker build -t rpslk-frontend:latest rpslk-game/frontend/.
+docker build -t rpslk-backend:v1.0.0 rpslk-game/backend/.
+docker build -t rpslk-frontend:v1.0.0 rpslk-game/frontend/.
 
-docker build -t vm-backend:latest vending-machine/backend/.
-docker build -t vm-frontend:latest vending-machine/frontend/.
+docker build -t vm-backend:v1.0.0 vending-machine/backend/.
+docker build -t vm-frontend:v1.0.0 vending-machine/frontend/.
