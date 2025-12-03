@@ -9,7 +9,7 @@ RUN pip3 --no-cache-dir install -r requirements.txt --target /packages
 COPY app.py app.py
 COPY run.py run.py
 
-FROM gcr.io/distroless/python3-debian12
+FROM gcr.io/distroless/cc-debian13:latest
 
 WORKDIR /app
 COPY --from=build-env /app /app
