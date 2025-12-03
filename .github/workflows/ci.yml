@@ -118,7 +118,7 @@ jobs:
         with:
           image-ref: rpslk-game-backend:ci-${{ github.run_id }}
           format: 'table' #format output as table
-          severity: 'CRITICAL,HIGH' #scan only CRITICAL and HIGH vuln
+          severity: 'CRITICAL,HIGH,MEDIUM' #scan only CRITICAL, HIGH, MED vuln
           exit-code: '1' # fail the job on vulnerabilities
           # Trivy caches DB by default to speed up subsequent runs.
 
@@ -127,7 +127,7 @@ jobs:
         with:
           image-ref: rpslk-game-frontend:ci-${{ github.run_id }}
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
 
       - name: Trivy - scan vending-machine backend image
@@ -135,7 +135,7 @@ jobs:
         with:
           image-ref: vending-machine-backend:ci-${{ github.run_id }}
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
 
       - name: Trivy - scan vending-machine frontend image
@@ -143,5 +143,5 @@ jobs:
         with:
           image-ref: vending-machine-frontend:ci-${{ github.run_id }}
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
