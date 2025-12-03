@@ -10,26 +10,33 @@ env: #env var declaration
   DOCKER_BUILDKIT: 1
 
 jobs:
-  dockerfile-lint: #job ID
-    name: Dockerfile lint #job name
+  docker-kube-file-lint: #job ID
+    name: Docker and Kube file lint #job name
     runs-on: ubuntu-latest #which OS will run on
     strategy: #var declaration for multi job run
       matrix:
-        path: ["rpslk-game/backend/Dockerfile", "rpslk-game/frontend/Dockerfile", "vending-machine/backend/Dockerfile", "vending-machine/frontend/Dockerfile"]
+        docker-path: ["rpslk-game/backend/Dockerfile", "rpslk-game/frontend/Dockerfile", "vending-machine/backend/Dockerfile", "vending-machine/frontend/Dockerfile"]
+        kube-path: ["rpslk-game", "vending-machine"]
     steps:
       - name: Checkout #checks out the repo to make it available for current workflow
         uses: actions/checkout@v6.0.0
 
-      - name: Run hadolint on ${{ matrix.path }} #hadolint analises dockerfiles to ensure it follows best practices and guidelines
+      - name: Run hadolint on ${{ matrix.docker-path }} #hadolint analises dockerfiles to ensure it follows best practices and guidelines
         uses: hadolint/hadolint-action@v3.3.0
         with: #input parameters defined by action
-          dockerfile: ${{ matrix.path }} #usage of matrix variable previously set in strategy section
-          failure-threshold: error #if error is found, pipepline is stopped
+          dockerfile: ${{ matrix.docker-path }} #usage of matrix variable previously set in strategy section
+          failure-threshold: error #if error is found, stops wf
+
+      - name: Run kube-linter on ${{ matrix.kube-path }} #kube-linter analises kubernetes files
+        uses: stackrox/kube-linter-action@v1.0.7
+        with:
+          directory: ${{ matrix.kube-path }}
+          fail-on-invalid-resource: true #if invalid, stops wf
 
   test-and-build:
     name: Tests, build images (no push) and scan
     runs-on: ubuntu-latest
-    needs: dockerfile-lint #this job depends on the correct end of stated job
+    needs: docker-kube-file-lint #this job depends on the correct end of stated job
     env:
       IMAGE_NAMESPACE: ${{ secrets.DOCKER_REPO }} #usage of secret var
     steps:
