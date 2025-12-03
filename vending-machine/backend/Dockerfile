@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.15.0a2-slim AS build-env
+FROM python:alpine AS build-env
 
 WORKDIR /app
 
