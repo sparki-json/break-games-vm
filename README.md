@@ -1,3 +1,5 @@
+[![CI - lint, test, build (no push) & sec scan](https://github.com/sparki-json/break-games-vm/actions/workflows/ci.yml/badge.svg)](https://github.com/sparki-json/break-games-vm/actions/workflows/ci.yml)
+
 # Break-Games vending machine
 Break-Games Vending Machine is a simple webapp developed with HTML/CSS and JS with Python Flask backend, the project is thought to have simple games as webapps which are deployed as containers and by user-request through the frontend of vending-machine. This is a learning project to practice Docker and Kubernetes technologies.
 
