@@ -21,7 +21,7 @@ Break-Games Vending Machine is a simple webapp developed with HTML/CSS and JS wi
 #### rock paper scissors lizard spock
 ![RockPaperScissorsLizardSpock screenshot](img/rpslk.png)
 
-## Initial Found Errors
+## Errorledge Base
 Errors found before creating the repository:
 ### ParrotOS repository conflict
 **ERROR** ParrotOS version 6.4 has codename `lory` which is not available with recommended Docker installation.
@@ -32,6 +32,8 @@ Errors found before creating the repository:
 **ERROR** When creating images they're stored in default Docker deamon and cannot be accessed from Kubernetes.
 
 **FIX** Change default Docker deamon to minikube deamon with `eval $(minikube docker-env)`.
+
+**FIX2** Load images into `minikube` with `minikube image load {image-name}`.
 
 ### Service type
 **ERROR** Using `LoadBalancer` type for services is not supported by `minikube` cluster.
