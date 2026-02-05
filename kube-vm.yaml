@@ -1,0 +1,225 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vending-machine
+  labels:
+    name: vending-machine
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deploy-manager
+  namespace: vending-machine 
+---          
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: deploy-management
+  namespace: vending-machine
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: deploy-controller
+  namespace: vending-machine
+subjects:
+- kind: ServiceAccount
+  name: deploy-manager
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: deploy-management
+  apiGroup: ""
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: deploy-manager-nodes-readonly
+  namespace: vending-machine
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: deploy-manager-nodes-readonly-binding
+  namespace: vending-machine
+subjects:
+  - kind: ServiceAccount
+    name: deploy-manager
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: deploy-manager-nodes-readonly
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vm-backend
+  namespace: vending-machine
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: vm-backend
+  template:
+    metadata:
+      labels:
+        app: vm-backend
+    spec:
+      serviceAccountName: deploy-manager
+      containers:
+        - name: vm-backend
+          image: vm-backend:v1.0.0
+          imagePullPolicy: Never
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: FLASK_ENV
+              value: "production"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vm-frontend
+  namespace: vending-machine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vm-frontend
+  template:
+    metadata:
+      labels:
+        app: vm-frontend
+    spec:
+      containers:
+        - name: vm-frontend
+          image: vm-frontend:v1.0.0
+          imagePullPolicy: Never
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-frontend
+  namespace: vending-machine
+spec:
+  selector:
+    app: vm-frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 80
+  type: NodePort 
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: vm-backend
+  namespace: vending-machine
+spec:
+  selector:
+    app: vm-backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpslk-backend
+  namespace: vending-machine
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: rpslk-backend
+  template:
+    metadata:
+      labels:
+        app: rpslk-backend
+    spec:
+      containers:
+        - name: rpslk-backend
+          image: rpslk-backend:v1.0.0
+          imagePullPolicy: Never
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: FLASK_ENV
+              value: "production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpslk-frontend
+  namespace: vending-machine
+spec:
+  sessionAffinity: ClientIP 
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 600
+  selector:
+    app: rpslk-frontend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 80
+  type: NodePort 
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: rpslk-backend
+  namespace: vending-machine
+spec:
+  selector:
+    app: rpslk-backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: NodePort

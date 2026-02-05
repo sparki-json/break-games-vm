@@ -24,78 +24,104 @@ def start_game():
     try:
         from kubernetes import client, config
         import time
-        import random
+        import uuid
 
-        DEPLOYMENT_NAME = "rpslk-frontend"
-        WAITING_TIMEOUT = 20
+        try:
+            config.load_incluster_config()
+        except config.ConfigException:
+            try:
+                config.load_kube_config()
+            except config.ConfigException:
+                raise Exception("Could not configure kubernetes python client")
 
-        config.load_config()
-        #config.load_kube_config()
+        v1 = client.CoreV1Api()
+        namespace = "vending-machine"
 
-        api = client.AppsV1Api()
-        core_api = client.CoreV1Api()
-
-        deployment_obj = api.read_namespaced_deployment_scale(
-            name=DEPLOYMENT_NAME,
-            namespace="default"
-        )
+        # convert minutes to seconds for Kubernetes
+        lifetime_seconds = int(lifetime * 60)
         
-        current_replicas = int(deployment_obj.status.replicas)
-        desired_replicas = current_replicas + 1        
+        # generate a unique name for this specific request instance
+        pod_name = f"{game}-{uuid.uuid4().hex[:8]}"
 
-        if desired_replicas > 10:
-            return jsonify({"warning": "too many concurrent games, pod creation not possible"}), 400
-
-        patch_body = {
-            "spec": {
-                "replicas": desired_replicas
-            }
-        }
-
-        api.patch_namespaced_deployment_scale(
-            name=DEPLOYMENT_NAME,
-            namespace="default",
-            body=patch_body
+        # define the pod spec
+        # the label 'app: rpslk-frontend' MUST match the Service selector
+        pod_spec = client.V1Pod(
+            metadata=client.V1ObjectMeta(
+                name=pod_name,
+                labels={
+                    "app": "rpslk-frontend",
+                    "managed-by": "vm-backend"
+                },
+                # clean up the pod object 60s after it finishes/dies
+                ttl_seconds_after_finished=60
+            ),
+            spec=client.V1PodSpec(
+                active_deadline_seconds=lifetime_seconds,
+                restart_policy="Never",
+                containers=[
+                    client.V1Container(
+                        name="rpslk-frontend",
+                        image="rpslk-frontend:v1.0.0",
+                        imagePullPolicy="Never",
+                        ports=[client.V1ContainerPort(container_port=80)],
+                        securityContext={
+                            "readOnlyRootFilesystem": True,
+                            "runAsNonRoot": True
+                        }
+                    )
+                ]
+            )
         )
 
-        current_status = api.read_namespaced_deployment(DEPLOYMENT_NAME, "default").status
+        # create the pod
+        try:
+            v1.create_namespaced_pod(namespace=namespace, body=pod_spec)
+            print(f"Created pod {pod_name} with lifetime {lifetime}m")
+        except client.exceptions.ApiException as e:
+            raise Exception(f"Failed to create pod: {e}")
 
-        slept_time = 0.0
+        # wait for pod to be Running and get IP
+        print("Waiting for pod to get IP...")
+        max_wait = 60  # timeout for pod startup
+        start_time = time.time()
 
-        while desired_replicas != current_status.ready_replicas:
-            print("waiting 0.5s for available pod, total time waited: ", slept_time)
-            #print("current status: ", current_status)
-            time.sleep(0.5)
-            slept_time += 0.5
+        while True:
+            if time.time() - start_time > max_wait:
+                # cleanup if stuck
+                v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+                raise Exception("Could not create pod on time")
 
-            if slept_time > WAITING_TIMEOUT:
-                raise Exception("replica wasnt created on time")
+            try:
+                pod_status = v1.read_namespaced_status(name=pod_name, namespace=namespace)
+                
+                if pod_status.status.phase == "Running" and pod_status.status.pod_ip:
+                    #connection_string = "http://rpslk-frontend.vending-machine.svc.cluster.local:8080" # pod ip inside cluster
 
-            current_status = api.read_namespaced_deployment(DEPLOYMENT_NAME, "default").status
+                    nodes = v1.list_node().items
+                    node_ips = []
 
-        #get a list of all cluster nodes IPs
-        nodes = core_api.list_node().items
-        node_ips = []
+                    for node in nodes:
+                        for address in node.status.addresses:
+                            if address.type == "InternalIP":
+                                node_ips.append(address.address)
 
-        for node in nodes:
-            for address in node.status.addresses:
-                if address.type == "InternalIP":
-                    node_ips.append(address.address)
+                    #get the service port
+                    service = core_api.read_namespaced_service(DEPLOYMENT_NAME, "default")
+                    port = service.spec.ports[0].node_port
 
-        #get the service port
-        service = core_api.read_namespaced_service(DEPLOYMENT_NAME, "default")
-        port = service.spec.ports[0].node_port
+                    break
+                
+                if pod_status.status.phase in ["Failed", "Succeeded"]:
+                    raise Exception("Pod creation failed")
 
-        pods = core_api.list_namespaced_pod(
-            namespace="default",
-            label_selector="app=rpslk-frontend"
-        )
-        
-        pod_name = pods.items[desired_replicas - 1].metadata.name #assumes last pod is the newly created
+            except client.exceptions.ApiException:
+                pass
+            
+            time.sleep(1)
 
         return jsonify({"pod": pod_name, "status": "running", "ip": f"{random.choice(node_ips)}:{port}", "lifetime": lifetime})
     except Exception as e:
-        return jsonify({"error": "Internal error"}), 400
+        return jsonify({"error": f"Internal error: {e}"}), 400
 
     return jsonify({"error": "Internal error"}), 400
 

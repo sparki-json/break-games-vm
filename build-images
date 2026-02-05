@@ -1,6 +1,102 @@
-#!/bin/bash
-docker build -t rpslk-backend:v1.0.0 rpslk-game/backend/.
-docker build -t rpslk-frontend:v1.0.0 rpslk-game/frontend/.
+#!/usr/bin/env bash
+set -u
 
-docker build -t vm-backend:v1.0.0 vending-machine/backend/.
-docker build -t vm-frontend:v1.0.0 vending-machine/frontend/.
+# concurrency (adjust as needed)
+J=${J:-4}
+
+# images and contexts (keep same order)
+tags=(
+  "rpslk-backend:v1.0.0"
+  "rpslk-frontend:v1.0.0"
+  "vm-backend:v1.0.0"
+  "vm-frontend:v1.0.0"
+)
+contexts=(
+  "rpslk-game/backend/."
+  "rpslk-game/frontend/."
+  "vending-machine/backend/."
+  "vending-machine/frontend/."
+)
+
+logs_dir="./logs"
+mkdir -p "$logs_dir"
+
+# helper to create safe file name from tag
+safe_name() {
+  echo "$1" | tr '/:' '_'
+}
+
+# start builds in background (limited concurrency)
+build_pids=()
+build_tags=()
+for i in "${!tags[@]}"; do
+  tag="${tags[i]}"
+  ctx="${contexts[i]}"
+  safe="$(safe_name "$tag")"
+
+  # wait for a free slot if needed
+  while [ "$(jobs -rp | wc -l)" -ge "$J" ]; do sleep 0.2; done
+
+  echo "Starting build: $tag (context: $ctx)"
+  (
+    docker build -t "$tag" "$ctx" > "$logs_dir/build_${safe}.log" 2>&1
+  ) &
+  build_pids+=("$!")
+  build_tags+=("$tag")
+done
+
+# wait for builds and collect failures
+failed_builds=()
+for idx in "${!build_pids[@]}"; do
+  pid="${build_pids[idx]}"
+  tag="${build_tags[idx]}"
+  safe="$(safe_name "$tag")"
+  if wait "$pid"; then
+    echo "Build succeeded: $tag"
+  else
+    echo "Build failed: $tag (logs: $logs_dir/build_${safe}.log)"
+    failed_builds+=("$tag")
+  fi
+done
+
+if [ "${#failed_builds[@]}" -ne 0 ]; then
+  echo "ERROR: ${#failed_builds[@]} build(s) failed. See logs in $logs_dir."
+  exit 1
+fi
+
+# load images into minikube in parallel (same concurrency control)
+load_pids=()
+load_tags=()
+for tag in "${tags[@]}"; do
+  safe="$(safe_name "$tag")"
+  while [ "$(jobs -rp | wc -l)" -ge "$J" ]; do sleep 0.2; done
+
+  echo "Loading into minikube: $tag"
+  (
+    minikube image load "$tag" > "$logs_dir/load_${safe}.log" 2>&1
+  ) &
+  load_pids+=("$!")
+  load_tags+=("$tag")
+done
+
+# wait for loads and collect failures
+failed_loads=()
+for idx in "${!load_pids[@]}"; do
+  pid="${load_pids[idx]}"
+  tag="${load_tags[idx]}"
+  safe="$(safe_name "$tag")"
+  if wait "$pid"; then
+    echo "Loaded: $tag"
+  else
+    echo "Failed to load: $tag (logs: $logs_dir/load_${safe}.log)"
+    failed_loads+=("$tag")
+  fi
+done
+
+if [ "${#failed_loads[@]}" -ne 0 ]; then
+  echo "ERROR: ${#failed_loads[@]} minikube load(s) failed. See logs in $logs_dir."
+  exit 2
+fi
+
+echo "All builds and minikube loads completed successfully."
+exit 0
