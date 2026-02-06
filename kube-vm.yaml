@@ -64,7 +64,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: deploy-manager
-    namespace: default
+    namespace: vending-machine
 roleRef:
   kind: ClusterRole
   name: deploy-manager-nodes-readonly

@@ -2,9 +2,6 @@ from app import application
 import multiprocessing
 import gunicorn.app.base
 
-def number_of_workers():
-    return (multiprocessing.cpu_count() * 2) + 1
-
 class RunByGunicorn(gunicorn.app.base.BaseApplication):
 
     def __init__(self, app, options=None):
@@ -24,7 +21,7 @@ class RunByGunicorn(gunicorn.app.base.BaseApplication):
 if __name__ == "__main__":
     options = {
             'bind': '%s:%s' % ('0.0.0.0', '8000'),
-            'workers': number_of_workers(),
+            'workers': 1,
     }
     RunByGunicorn(application, options).run()
         

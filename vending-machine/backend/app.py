@@ -1,4 +1,8 @@
 from flask import Flask, request, jsonify
+import time
+import uuid
+import random
+from kubernetes import client, config
 
 application = Flask(__name__)
 
@@ -19,13 +23,7 @@ def start_game():
     if game not in options:
         return jsonify({"error": "Missing or invalid JSON"}), 400
 
-    #after request data validation, the program begins
-
     try:
-        from kubernetes import client, config
-        import time
-        import uuid
-
         try:
             config.load_incluster_config()
         except config.ConfigException:
@@ -34,17 +32,16 @@ def start_game():
             except config.ConfigException:
                 raise Exception("Could not configure kubernetes python client")
 
-        v1 = client.CoreV1Api()
+        v1 = client.CoreV1Api() 
+        
         namespace = "vending-machine"
 
         # convert minutes to seconds for Kubernetes
         lifetime_seconds = int(lifetime * 60)
         
-        # generate a unique name for this specific request instance
+        # generate a unique name
         pod_name = f"{game}-{uuid.uuid4().hex[:8]}"
 
-        # define the pod spec
-        # the label 'app: rpslk-frontend' MUST match the Service selector
         pod_spec = client.V1Pod(
             metadata=client.V1ObjectMeta(
                 name=pod_name,
@@ -52,7 +49,6 @@ def start_game():
                     "app": "rpslk-frontend",
                     "managed-by": "vm-backend"
                 },
-                # clean up the pod object 60s after it finishes/dies
                 ttl_seconds_after_finished=60
             ),
             spec=client.V1PodSpec(
@@ -73,21 +69,20 @@ def start_game():
             )
         )
 
-        # create the pod
         try:
             v1.create_namespaced_pod(namespace=namespace, body=pod_spec)
             print(f"Created pod {pod_name} with lifetime {lifetime}m")
         except client.exceptions.ApiException as e:
             raise Exception(f"Failed to create pod: {e}")
 
-        # wait for pod to be Running and get IP
         print("Waiting for pod to get IP...")
-        max_wait = 60  # timeout for pod startup
+        max_wait = 60 
         start_time = time.time()
+        node_ips = []
+        port = 0
 
         while True:
             if time.time() - start_time > max_wait:
-                # cleanup if stuck
                 v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
                 raise Exception("Could not create pod on time")
 
@@ -95,18 +90,11 @@ def start_game():
                 pod_status = v1.read_namespaced_status(name=pod_name, namespace=namespace)
                 
                 if pod_status.status.phase == "Running" and pod_status.status.pod_ip:
-                    #connection_string = "http://rpslk-frontend.vending-machine.svc.cluster.local:8080" # pod ip inside cluster
+                    node_ip = pod_status.status.host_ip
 
-                    nodes = v1.list_node().items
-                    node_ips = []
-
-                    for node in nodes:
-                        for address in node.status.addresses:
-                            if address.type == "InternalIP":
-                                node_ips.append(address.address)
-
-                    #get the service port
-                    service = core_api.read_namespaced_service(DEPLOYMENT_NAME, "default")
+                    service_name = "rpslk-frontend"
+                    
+                    service = v1.read_namespaced_service(service_name, namespace)
                     port = service.spec.ports[0].node_port
 
                     break
@@ -119,11 +107,15 @@ def start_game():
             
             time.sleep(1)
 
-        return jsonify({"pod": pod_name, "status": "running", "ip": f"{random.choice(node_ips)}:{port}", "lifetime": lifetime})
-    except Exception as e:
-        return jsonify({"error": f"Internal error: {e}"}), 400
+        return jsonify({
+            "pod": pod_name, 
+            "status": "running", 
+            "ip": f"{node_ip}:{port}", 
+            "lifetime": lifetime
+        })
 
-    return jsonify({"error": "Internal error"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal error: {str(e)}"}), 400
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    application.run(host="0.0.0.0", port=8000, debug=True)
