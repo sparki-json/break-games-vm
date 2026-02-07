@@ -24,6 +24,7 @@ def start_game():
         return jsonify({"error": "Missing or invalid JSON"}), 400
 
     try:
+        # Load Kubernetes Config
         try:
             config.load_incluster_config()
         except config.ConfigException:
@@ -33,14 +34,16 @@ def start_game():
                 raise Exception("Could not configure kubernetes python client")
 
         v1 = client.CoreV1Api() 
-        
         namespace = "vending-machine"
-
-        # convert minutes to seconds for Kubernetes
         lifetime_seconds = int(lifetime * 60)
-        
-        # generate a unique name
         pod_name = f"{game}-{uuid.uuid4().hex[:8]}"
+
+        # use client objects for SecurityContext, not a raw dictionary.
+        # arguments must be snake_case
+        security_context = client.V1SecurityContext(
+            read_only_root_filesystem=False,
+            run_as_non_root=False
+        )
 
         pod_spec = client.V1Pod(
             metadata=client.V1ObjectMeta(
@@ -48,8 +51,7 @@ def start_game():
                 labels={
                     "app": "rpslk-frontend",
                     "managed-by": "vm-backend"
-                },
-                ttl_seconds_after_finished=60
+                }
             ),
             spec=client.V1PodSpec(
                 active_deadline_seconds=lifetime_seconds,
@@ -58,12 +60,9 @@ def start_game():
                     client.V1Container(
                         name="rpslk-frontend",
                         image="rpslk-frontend:v1.0.0",
-                        imagePullPolicy="Never",
+                        image_pull_policy="Never",
                         ports=[client.V1ContainerPort(container_port=80)],
-                        securityContext={
-                            "readOnlyRootFilesystem": True,
-                            "runAsNonRoot": True
-                        }
+                        security_context=security_context
                     )
                 ]
             )
@@ -78,28 +77,33 @@ def start_game():
         print("Waiting for pod to get IP...")
         max_wait = 60 
         start_time = time.time()
-        node_ips = []
+        node_ip = None
         port = 0
 
         while True:
             if time.time() - start_time > max_wait:
-                v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+                # cleanup if it times out
+                try:
+                    v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+                except:
+                    pass
                 raise Exception("Could not create pod on time")
 
             try:
-                pod_status = v1.read_namespaced_status(name=pod_name, namespace=namespace)
+                pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)
                 
-                if pod_status.status.phase == "Running" and pod_status.status.pod_ip:
-                    node_ip = pod_status.status.host_ip
+                if pod.status.phase == "Running" and pod.status.pod_ip:
+                    # Get the Node IP (Host IP)
+                    node_ip = pod.status.host_ip
 
+                    # Get the Service NodePort
                     service_name = "rpslk-frontend"
-                    
                     service = v1.read_namespaced_service(service_name, namespace)
                     port = service.spec.ports[0].node_port
 
                     break
                 
-                if pod_status.status.phase in ["Failed", "Succeeded"]:
+                if pod.status.phase in ["Failed", "Succeeded"]:
                     raise Exception("Pod creation failed")
 
             except client.exceptions.ApiException:
