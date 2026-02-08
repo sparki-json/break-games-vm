@@ -18,11 +18,12 @@ Break-Games Vending Machine is a simple webapp developed with HTML/CSS and JS wi
 
 ## Screenshots
 ### vending machine
-![Vending Machine screenshot](docs/img/vm.png)
+![Vending Machine screenshot](docs/img/bgvm-vending-machine.png)
 
 ### current games
 #### rock paper scissors lizard spock
-![RockPaperScissorsLizardSpock screenshot](docs/img/rpslk.png)
+![RockPaperScissorsLizardSpock choose screenshot](docs/img/bgvm-rpslk-choose.png)
+![RockPaperScissorsLizardSpock play screenshot](docs/img/bgvm-rpslk-play.png)
 
 ## Errorledge Base
 This project's error knowledge base:
