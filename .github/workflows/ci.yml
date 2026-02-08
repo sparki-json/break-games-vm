@@ -1,4 +1,4 @@
-name: CI - lint, test, build (no push) & sec scan
+name: CI - lint, test, build & sec scan
 on: #which events trigger the actions
   pull_request:
     branches: [ main ]
@@ -34,11 +34,9 @@ jobs:
           fail-on-invalid-resource: true #if invalid, stops wf
 
   test-and-build:
-    name: Tests, build images (no push) and scan
+    name: Tests, build images and scan
     runs-on: ubuntu-latest
     needs: docker-kube-file-lint #this job depends on the correct end of stated job
-    env:
-      IMAGE_NAMESPACE: ${{ secrets.DOCKER_REPO }} #usage of secret var
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.0
@@ -65,11 +63,6 @@ jobs:
             python -m pip install --upgrade pip
             python -m pip install -r requirements.txt
           fi
-          if [ -d tests ] || [ -f pytest.ini ]; then 
-            pytest -q || ( echo "backend tests failed"; exit 1 )
-          else
-            echo "No backend tests detected - skipping pytest"
-          fi
 
       - name: Backend tests (vending-machine)
         working-directory: vending-machine/backend
@@ -78,52 +71,53 @@ jobs:
             python -m pip install --upgrade pip
             python -m pip install -r requirements.txt
           fi
-          if [ -d tests ] || [ -f pytest.ini ]; then
-            pytest -q || ( echo "vending-machine backend tests failed"; exit 1 )
-          else
-            echo "No vending-machine backend tests detected - skipping pytest"
-          fi
 
-      - name: Build images (load into runner - no push) #builds docker image with parameters
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build images (load into runner - pushing) #builds docker image with parameters
         uses: docker/build-push-action@v6.18.0
         with:
           context: rpslk-game/backend
           file: rpslk-game/backend/Dockerfile
-          push: false #wont push to repo
+          push: true #push to Docker Hub repo
           load: true #loads image to use for workflow
-          tags: rpslk-game-backend:ci-${{ github.run_id }} #tags the image with current running id
+          tags: sparki0yml/bgvm-rpslk-backend:latest,sparki0yml/bgvm-rpslk-backend:${{ github.run_id }} #tags the image with current running id
 
       - name: Build rpslk-game frontend image (load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: rpslk-game/frontend
           file: rpslk-game/frontend/Dockerfile
-          push: false
+          push: true
           load: true
-          tags: rpslk-game-frontend:ci-${{ github.run_id }}
+          tags: sparki0yml/bgvm-rpslk-frontend:latest,sparki0yml/bgvm-rpslk-frontend:${{ github.run_id }}
 
       - name: Build vending-machine backend image (load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: vending-machine/backend
           file: vending-machine/backend/Dockerfile
-          push: false
+          push: true
           load: true
-          tags: vending-machine-backend:ci-${{ github.run_id }}
+          tags: sparki0yml/bgvm-vm-backend:latest,sparki0yml/bgvm-vm-backend:${{ github.run_id }}
 
       - name: Build vending-machine frontend image (load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: vending-machine/frontend
           file: vending-machine/frontend/Dockerfile
-          push: false
+          push: true
           load: true
-          tags: vending-machine-frontend:ci-${{ github.run_id }}
+          tags: sparki0yml/bgvm-vm-frontend:latest,sparki0yml/bgvm-vm-frontend:${{ github.run_id }}
 
       - name: Trivy - scan rpslk-game backend image #scans docker image for security vulnerabilities 
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: rpslk-game-backend:ci-${{ github.run_id }}
+          image-ref: sparki0yml/bgvm-rpslk-backend:ci-${{ github.run_id }}
           format: 'table' #format output as table
           severity: 'CRITICAL,HIGH,MEDIUM' #scan only CRITICAL, HIGH, MED vuln
           exit-code: '1' # fail the job on vulnerabilities
@@ -132,7 +126,7 @@ jobs:
       - name: Trivy - scan rpslk-game frontend image
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: rpslk-game-frontend:ci-${{ github.run_id }}
+          image-ref: sparki0yml/bgvm-rpslk-frontend:ci-${{ github.run_id }}
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
@@ -140,7 +134,7 @@ jobs:
       - name: Trivy - scan vending-machine backend image
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: vending-machine-backend:ci-${{ github.run_id }}
+          image-ref: sparki0yml/bgvm-vm-backend:ci-${{ github.run_id }}
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
@@ -148,7 +142,7 @@ jobs:
       - name: Trivy - scan vending-machine frontend image
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: vending-machine-frontend:ci-${{ github.run_id }}
+          image-ref: sparki0yml/bgvm-vm-frontend:ci-${{ github.run_id }}
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'

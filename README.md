@@ -1,7 +1,7 @@
 [![CI - lint, test, build (no push) & sec scan](https://github.com/sparki-json/break-games-vm/actions/workflows/ci.yml/badge.svg)](https://github.com/sparki-json/break-games-vm/actions/workflows/ci.yml)
 
 # Break-Games vending machine
-Break-Games Vending Machine is a simple webapp developed with HTML/CSS and JS with Python Flask backend, the project is thought to have simple games as webapps which are deployed as containers and by user-request through the frontend of vending-machine. This is a learning project to practice Docker & Kubernetes alongside Terraform IaC and CI/CD pipelines through GitHub actions. Idea comes from DEF CON 31 event where a group of hackers built a shell-on-demand vending machine where users could select a Linux Distro and a paper with the SSH credentials was printed, ![link to the video](https://www.youtube.com/watch?v=pmW6lMCEaJc).
+Break-Games Vending Machine is a simple webapp developed with HTML/CSS and JS with Python Flask backend, the project is thought to have simple games as webapps which are deployed as containers and by user-request through the frontend of vending-machine. This is a learning project to practice Docker & Kubernetes alongside Terraform IaC and CI/CD pipelines through GitHub actions. Idea comes from DEF CON 31 event where a group of hackers built a shell-on-demand vending machine where users could select a Linux Distro and a paper with the SSH credentials was printed, [link to the video](https://www.youtube.com/watch?v=pmW6lMCEaJc).
 
 ## TO-DOs
 - [x] Creation of Dockerfile for initial frontend and backend
@@ -10,7 +10,7 @@ Break-Games Vending Machine is a simple webapp developed with HTML/CSS and JS wi
 - [x] CI pipeline through GitHub actions
 - [x] Add pod creation on-demand with limited lifetime and pod-specific connection URI
 - [x] Terraform IaC for AWS VM creation
-- [ ] CD pipline through GitHub actions to deploy into Terraform created AWS VM
+- [ ] CD pipline through GitHub actions to deploy into Terraform-created AWS instance
 ### Future Nice-TO-DOs
 - [ ] *maybe* Add multiplayer (to practice web online)
 - [ ] *maybe* Add more games (to make it funnier?)
