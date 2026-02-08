@@ -89,7 +89,7 @@ spec:
       serviceAccountName: deploy-manager
       containers:
         - name: vm-backend
-          image: vm-backend:v1.0.0
+          image: sparki0yml/bgvm-vm-backend
           imagePullPolicy: Never
           resources:
             requests:
@@ -121,7 +121,7 @@ spec:
     spec:
       containers:
         - name: vm-frontend
-          image: vm-frontend:v1.0.0
+          image: sparki0yml/bgvm-vm-frontend
           imagePullPolicy: Never
           resources:
             requests:
@@ -178,7 +178,7 @@ spec:
     spec:
       containers:
         - name: rpslk-backend
-          image: rpslk-backend:v1.0.0
+          image: sparki0yml/bgvm-rpslk-backend
           imagePullPolicy: Never
           resources:
             requests:

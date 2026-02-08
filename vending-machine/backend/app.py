@@ -49,7 +49,7 @@ def start_game():
             metadata=client.V1ObjectMeta(
                 name=pod_name,
                 labels={
-                    "app": "rpslk-frontend",
+                    "app": f"{game}-frontend",
                     "managed-by": "vm-backend"
                 }
             ),
@@ -58,8 +58,8 @@ def start_game():
                 restart_policy="Never",
                 containers=[
                     client.V1Container(
-                        name="rpslk-frontend",
-                        image="rpslk-frontend:v1.0.0",
+                        name=f"{game}-frontend",
+                        image=f"sparki0yml/bgvm-{game}-frontend",
                         image_pull_policy="Never",
                         ports=[client.V1ContainerPort(container_port=80)],
                         security_context=security_context
@@ -97,7 +97,7 @@ def start_game():
                     node_ip = pod.status.host_ip
 
                     # Get the Service NodePort
-                    service_name = "rpslk-frontend"
+                    service_name = f"{game}-frontend"
                     service = v1.read_namespaced_service(service_name, namespace)
                     port = service.spec.ports[0].node_port
 
