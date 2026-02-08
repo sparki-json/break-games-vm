@@ -40,8 +40,15 @@ jobs:
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
           
-          echo "Instance is up at $PUBLIC_IP"
-          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          RUNNER_IP=$(curl -s http://checkip.amazonaws.com)
+          echo "runner_ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+
+          echo "Whitelisting IP: $RUNNER_IP in Security Group"
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr $RUNNER_IP/32
           
           # Wait a bit for SSH and K3s to actually boot up inside the OS
           echo "Waiting 60s for K3s to initialize..."
@@ -54,29 +61,22 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Pull latest code or docker images
-            # (Assuming you are using public images or already logged in)
-            
-            # Apply the Kubernetes manifests
-            # You might need to git pull or copy the yaml file here first
-            # For this example, let's assume you copy the file content or git pull
-            
             git clone https://github.com/${{ github.repository }}.git temp-repo || (cd temp-repo && git pull)
-            kubectl apply -f temp-repo/kube-vm.yaml
+            sudo kubectl delete -f temp-repo/kube-vm.yaml
+            sudo kubectl apply -f temp-repo/kube-vm.yaml
             
             # Wait for rollout
-            kubectl rollout status deployment/vm-backend -n vending-machine
+            sudo kubectl rollout status deployment/vm-backend -n vending-machine
 
       - name: Run Integration Test
         run: |
           IP=${{ steps.start-ec2.outputs.public_ip }}
-          # Remember: NodePort 30080 (if you configured it that way)
-          TARGET_URL="http://$IP:30080/start-game"
+          TARGET_URL="http://$IP:8080"
           
           echo "Testing endpoint: $TARGET_URL"
           
           # Simple Curl Test
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"game": "rpslk", "lifetime": 1}' $TARGET_URL)
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $TARGET_URL)
           
           if [ "$RESPONSE" -eq 200 ]; then
             echo "SUCCESS: Server returned 200"
@@ -86,7 +86,15 @@ jobs:
           fi
 
       - name: Stop EC2 Instance
-        if: always()  # <--- CRITICAL: Runs even if previous steps failed
+        if: always()  # runs even if previous steps failed
         run: |
-          echo "Stopping instance to save money..."
+          RUNNER_IP=${{ steps.start-ec2.outputs.runner_ip }}
+          echo "Revoking IP: $RUNNER_IP"
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr $RUNNER_IP/32
+
+          echo "Stopping instance..."
           aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
