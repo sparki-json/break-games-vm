@@ -60,7 +60,7 @@ def start_game():
                     client.V1Container(
                         name=f"{game}-frontend",
                         image=f"sparki0yml/bgvm-{game}-frontend",
-                        image_pull_policy="Never",
+                        image_pull_policy="IfNotPresent",
                         ports=[client.V1ContainerPort(container_port=80)],
                         security_context=security_context
                     )
