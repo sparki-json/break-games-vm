@@ -10,6 +10,8 @@ RUN apt-get update && \
 RUN ln -sf /dev/stdout /var/log/nginx/access.log && \
     ln -sf /dev/stderr /var/log/nginx/error.log
 
+RUN rm /etc/nginx/sites-enabled/default
+
 # create a directory to gather dependencies
 WORKDIR /packages
 
@@ -41,7 +43,7 @@ COPY --from=build-env /var/www/html /var/www/html
 
 COPY --from=build-env /var/log/nginx /var/log/nginx
 
-COPY --from=build-env --chown=nonroot:nonroot /var/lib/nginx /var/lib/nginx
+COPY --from=build-env /var/lib/nginx /var/lib/nginx
 
 # Nginx default port
 EXPOSE 80

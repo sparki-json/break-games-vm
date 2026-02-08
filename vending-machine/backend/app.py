@@ -1,4 +1,8 @@
 from flask import Flask, request, jsonify
+import time
+import uuid
+import random
+from kubernetes import client, config
 
 application = Flask(__name__)
 
@@ -19,85 +23,103 @@ def start_game():
     if game not in options:
         return jsonify({"error": "Missing or invalid JSON"}), 400
 
-    #after request data validation, the program begins
-
     try:
-        from kubernetes import client, config
-        import time
-        import random
+        # Load Kubernetes Config
+        try:
+            config.load_incluster_config()
+        except config.ConfigException:
+            try:
+                config.load_kube_config()
+            except config.ConfigException:
+                raise Exception("Could not configure kubernetes python client")
 
-        DEPLOYMENT_NAME = "rpslk-frontend"
-        WAITING_TIMEOUT = 20
+        v1 = client.CoreV1Api() 
+        namespace = "vending-machine"
+        lifetime_seconds = int(lifetime * 60)
+        pod_name = f"{game}-{uuid.uuid4().hex[:8]}"
 
-        config.load_config()
-        #config.load_kube_config()
-
-        api = client.AppsV1Api()
-        core_api = client.CoreV1Api()
-
-        deployment_obj = api.read_namespaced_deployment_scale(
-            name=DEPLOYMENT_NAME,
-            namespace="default"
-        )
-        
-        current_replicas = int(deployment_obj.status.replicas)
-        desired_replicas = current_replicas + 1        
-
-        if desired_replicas > 10:
-            return jsonify({"warning": "too many concurrent games, pod creation not possible"}), 400
-
-        patch_body = {
-            "spec": {
-                "replicas": desired_replicas
-            }
-        }
-
-        api.patch_namespaced_deployment_scale(
-            name=DEPLOYMENT_NAME,
-            namespace="default",
-            body=patch_body
+        # use client objects for SecurityContext, not a raw dictionary.
+        # arguments must be snake_case
+        security_context = client.V1SecurityContext(
+            read_only_root_filesystem=False,
+            run_as_non_root=False
         )
 
-        current_status = api.read_namespaced_deployment(DEPLOYMENT_NAME, "default").status
-
-        slept_time = 0.0
-
-        while desired_replicas != current_status.ready_replicas:
-            print("waiting 0.5s for available pod, total time waited: ", slept_time)
-            #print("current status: ", current_status)
-            time.sleep(0.5)
-            slept_time += 0.5
-
-            if slept_time > WAITING_TIMEOUT:
-                raise Exception("replica wasnt created on time")
-
-            current_status = api.read_namespaced_deployment(DEPLOYMENT_NAME, "default").status
-
-        #get a list of all cluster nodes IPs
-        nodes = core_api.list_node().items
-        node_ips = []
-
-        for node in nodes:
-            for address in node.status.addresses:
-                if address.type == "InternalIP":
-                    node_ips.append(address.address)
-
-        #get the service port
-        service = core_api.read_namespaced_service(DEPLOYMENT_NAME, "default")
-        port = service.spec.ports[0].node_port
-
-        pods = core_api.list_namespaced_pod(
-            namespace="default",
-            label_selector="app=rpslk-frontend"
+        pod_spec = client.V1Pod(
+            metadata=client.V1ObjectMeta(
+                name=pod_name,
+                labels={
+                    "app": f"{game}-frontend",
+                    "managed-by": "vm-backend"
+                }
+            ),
+            spec=client.V1PodSpec(
+                active_deadline_seconds=lifetime_seconds,
+                restart_policy="Never",
+                containers=[
+                    client.V1Container(
+                        name=f"{game}-frontend",
+                        image=f"sparki0yml/bgvm-{game}-frontend",
+                        image_pull_policy="Never",
+                        ports=[client.V1ContainerPort(container_port=80)],
+                        security_context=security_context
+                    )
+                ]
+            )
         )
-        
-        pod_name = pods.items[desired_replicas - 1].metadata.name #assumes last pod is the newly created
 
-        return jsonify({"pod": pod_name, "status": "running", "ip": f"{random.choice(node_ips)}:{port}", "lifetime": lifetime})
+        try:
+            v1.create_namespaced_pod(namespace=namespace, body=pod_spec)
+            print(f"Created pod {pod_name} with lifetime {lifetime}m")
+        except client.exceptions.ApiException as e:
+            raise Exception(f"Failed to create pod: {e}")
+
+        print("Waiting for pod to get IP...")
+        max_wait = 60 
+        start_time = time.time()
+        node_ip = None
+        port = 0
+
+        while True:
+            if time.time() - start_time > max_wait:
+                # cleanup if it times out
+                try:
+                    v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+                except:
+                    pass
+                raise Exception("Could not create pod on time")
+
+            try:
+                pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+                
+                if pod.status.phase == "Running" and pod.status.pod_ip:
+                    # Get the Node IP (Host IP)
+                    node_ip = pod.status.host_ip
+
+                    # Get the Service NodePort
+                    service_name = f"{game}-frontend"
+                    service = v1.read_namespaced_service(service_name, namespace)
+                    port = service.spec.ports[0].node_port
+
+                    break
+                
+                if pod.status.phase in ["Failed", "Succeeded"]:
+                    raise Exception("Pod creation failed")
+
+            except client.exceptions.ApiException:
+                pass
+            
+            time.sleep(1)
+
+        return jsonify({
+            "pod": pod_name, 
+            "status": "running", 
+            "ip": f"{node_ip}:{port}", 
+            "lifetime": lifetime
+        })
+
     except Exception as e:
-        return jsonify({"error": "Internal error"}), 400
-
-    return jsonify({"error": "Internal error"}), 400
+        return jsonify({"error": f"Internal error: {str(e)}"}), 400
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    application.run(host="0.0.0.0", port=8000, debug=True)
