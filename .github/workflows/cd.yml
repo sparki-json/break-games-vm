@@ -39,6 +39,9 @@ jobs:
             --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
             --query "Reservations[0].Instances[0].PublicIpAddress" \
             --output text)
+
+          echo "Instance is up at $PUBLIC_IP"
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
           
           RUNNER_IP=$(curl -s http://checkip.amazonaws.com)
           echo "runner_ip=$RUNNER_IP" >> $GITHUB_OUTPUT
