@@ -3,7 +3,7 @@ on: #which events trigger the actions
   pull_request:
     branches: [ main ]
   push:
-    branches: [ pod-on-demand ]
+    branches: [ main ]
   workflow_dispatch: #manually by user-request button in Actions tab
 
 env: #env var declaration
