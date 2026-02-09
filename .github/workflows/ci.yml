@@ -45,7 +45,7 @@ jobs:
         uses: docker/setup-qemu-action@v3.7.0
 
       - name: Set up Docker buildx #creates and boots a docker builder to use through the workflow
-        uses: docker/setup-buildx-action@v3.11.1
+        uses: docker/setup-buildx-action@v3.12.0
 
       - name: Cache pip (backend) #cache action to save time in future executions, saves python dependencies
         uses: actions/cache@v4.3.0
@@ -72,47 +72,50 @@ jobs:
             python -m pip install -r requirements.txt
           fi
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build images (load into runner - pushing) #builds docker image with parameters
+      - name: Build images (load into runner - no push) #builds docker image with parameters
         uses: docker/build-push-action@v6.18.0
         with:
           context: rpslk-game/backend
           file: rpslk-game/backend/Dockerfile
-          push: true #push to Docker Hub repo
+          push: false #doesnt push to Docker Hub repo
           load: true #loads image to use for workflow
-          tags: sparki0yml/bgvm-rpslk-backend:latest, bgvm-rpslk-backend:ci-${{ github.run_id }} #tags the image with current running id
+          tags: |
+            bgvm-rpslk-backend:ci-${{ github.run_id }}
+            sparki0yml/bgvm-rpslk-backend:latest
+          #double tags the image without pushing
 
       - name: Build rpslk-game frontend image (load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: rpslk-game/frontend
           file: rpslk-game/frontend/Dockerfile
-          push: true
+          push: false
           load: true
-          tags: sparki0yml/bgvm-rpslk-frontend:latest, bgvm-rpslk-frontend:ci-${{ github.run_id }}
+          tags: |
+            bgvm-rpslk-frontend:ci-${{ github.run_id }}
+            sparki0yml/bgvm-rpslk-frontend:latest
 
       - name: Build vending-machine backend image (load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: vending-machine/backend
           file: vending-machine/backend/Dockerfile
-          push: true
+          push: false
           load: true
-          tags: sparki0yml/bgvm-vm-backend:latest, bgvm-vm-backend:ci-${{ github.run_id }}
+          tags: |
+            bgvm-vm-backend:ci-${{ github.run_id }} 
+            sparki0yml/bgvm-vm-backend:latest
 
       - name: Build vending-machine frontend image (load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: vending-machine/frontend
           file: vending-machine/frontend/Dockerfile
-          push: true
+          push: false
           load: true
-          tags: sparki0yml/bgvm-vm-frontend:latest, bgvm-vm-frontend:ci-${{ github.run_id }}
+          tags: |
+            bgvm-vm-frontend:ci-${{ github.run_id }}
+            sparki0yml/bgvm-vm-frontend:latest
 
       - name: Trivy - scan rpslk-game backend image #scans docker image for security vulnerabilities 
         uses: aquasecurity/trivy-action@0.33.1
@@ -146,3 +149,16 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '0'
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push latest tag only
+        run: |
+          docker push sparki0yml/bgvm-rpslk-backend:latest
+          docker push sparki0yml/bgvm-rpslk-frontend:latest
+          docker push sparki0yml/bgvm-vm-backend:latest
+          docker push sparki0yml/bgvm-vm-frontend:latest
