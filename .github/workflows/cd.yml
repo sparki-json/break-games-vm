@@ -12,14 +12,14 @@ on:
 
 jobs:
   deploy-and-test:
-    # in real environment use if: ${{ github.event.workflow_run.conclusion == 'success' }} to avoid CD if CI failed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} # only runs CD if CI didnt failed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6.0.0
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -49,16 +49,14 @@ jobs:
           echo "Whitelisting IP: $RUNNER_IP in Security Group"
           aws ec2 authorize-security-group-ingress \
             --group-id ${{ secrets.AWS_SG_ID }} \
-            --protocol tcp \
-            --port 22 \
-            --cidr $RUNNER_IP/32
+            --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$RUNNER_IP/32}]' 'IpProtocol=tcp,FromPort=30000,ToPort=32767,IpRanges=[{CidrIp=$RUNNER_IP/32}]'
           
           # Wait a bit for SSH and K3s to actually boot up inside the OS
           echo "Waiting 60s for K3s to initialize..."
           sleep 60
 
       - name: Deploy to K3s via SSH
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ steps.start-ec2.outputs.public_ip }}
           username: ubuntu
@@ -74,7 +72,7 @@ jobs:
       - name: Run Integration Test
         run: |
           IP=${{ steps.start-ec2.outputs.public_ip }}
-          TARGET_URL="http://$IP:8080"
+          TARGET_URL="http://$IP:30080"
           
           echo "Testing endpoint: $TARGET_URL"
           
@@ -95,9 +93,7 @@ jobs:
           echo "Revoking IP: $RUNNER_IP"
           aws ec2 revoke-security-group-ingress \
             --group-id ${{ secrets.AWS_SG_ID }} \
-            --protocol tcp \
-            --port 22 \
-            --cidr $RUNNER_IP/32
+            --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$RUNNER_IP/32}]' 'IpProtocol=tcp,FromPort=30000,ToPort=32767,IpRanges=[{CidrIp=$RUNNER_IP/32}]'
 
           echo "Stopping instance..."
           aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
