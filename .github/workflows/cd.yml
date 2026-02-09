@@ -47,9 +47,8 @@ jobs:
           echo "runner_ip=$RUNNER_IP" >> $GITHUB_OUTPUT
 
           echo "Whitelisting IP: $RUNNER_IP in Security Group"
-          aws ec2 authorize-security-group-ingress \
-            --group-id ${{ secrets.AWS_SG_ID }} \
-            --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$RUNNER_IP/32}]' 'IpProtocol=tcp,FromPort=30000,ToPort=32767,IpRanges=[{CidrIp=$RUNNER_IP/32}]'
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr "$CIDR/32" || true
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 30000-32767 --cidr "$CIDR/32" || true
           
           # Wait a bit for SSH and K3s to actually boot up inside the OS
           echo "Waiting 60s for K3s to initialize..."
@@ -91,9 +90,8 @@ jobs:
         run: |
           RUNNER_IP=${{ steps.start-ec2.outputs.runner_ip }}
           echo "Revoking IP: $RUNNER_IP"
-          aws ec2 revoke-security-group-ingress \
-            --group-id ${{ secrets.AWS_SG_ID }} \
-            --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$RUNNER_IP/32}]' 'IpProtocol=tcp,FromPort=30000,ToPort=32767,IpRanges=[{CidrIp=$RUNNER_IP/32}]'
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr "$RUNNER_IP/32" || true
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 30000-32767 --cidr "$RUNNER_IP/32" || true
 
           echo "Stopping instance..."
           aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
